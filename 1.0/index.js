@@ -2,8 +2,30 @@
  * @ignore
  *  ImageZoom.
  * @author yiminghe@gmail.com, qiaohua@taobao.com, qiaofu@taobao.com
+ *
+ * Configs
+ *  imageNode
+ *  type
+ *  bigImageSrc
+ *  bigImageWidth
+ *  bigImageHeight
+ *  hasZoom
+ *  width
+ *  height
+ * Attributes
+ *  bigImageWidth
+ *  bigImageHeight
+ *  imageSrc
+ *  bigImageSrc
+ *  hasZoom
+ * Events
+
+ *  show()
+ *  hide()
+
+ *
  */
-KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
+KISSY.add(function (S, Node, Overlay, Base, Zoomer, undefined) {
     var $ = Node.all,
         doc = $(S.Env.host.document),
         IMAGEZOOM_ICON_TMPL = "<span class='{iconClass}'></span>",
@@ -22,14 +44,23 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
         return Math.min(Math.max(v, l), r);
     }
 
+    function ImageZoom(config) {
+        // 实例化的时候直接renderUI
+        ImageZoom.superclass.constructor.call(this, config);
+        this.renderUI(config);
+        this.bindUI();
+        this.init();// 初始化
+        this._bindCustomEvents();
+    }
+
     /**
      * image zoomer for kissy
      * @class KISSY.ImageZoom
      * @extends KISSY.Overlay
      */
-    var ImageZoom = Overlay.extend({
+     S.extend(ImageZoom,Base,{
 
-            initializer: function () {
+            init: function () {
                 var self = this;
 
                 if (!self.get("bigImageWidth") || !self.get("bigImageHeight")) {
@@ -40,10 +71,17 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
                 imageZoomBindUI(self);
             },
 
-            renderUI: function () {
-                var self = this,
-                    image = self.get('imageNode'),
-                    contentEl = self.get("contentEl");
+            //  TODO:把renderUI的过程往后放
+            renderUI: function (config) {
+
+                var self = this;
+                if (!self.zoomOverlay) {
+                    self.zoomOverlay = new Overlay(S.mix(config,{elCls:"ks-imagezoom-viewer"}));
+                    self.zoomOverlay.render();
+                }
+
+                var image = self.get('imageNode'),
+                    contentEl = self.zoomOverlay.get("contentEl");
 
                 self.bigImage = $(S.substitute(BIG_IMG_TPL, {
                     src: self.get("bigImageSrc"),
@@ -65,10 +103,11 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
 
             bindUI: function () {
                 var self = this;
-                self.on('hide', onZoomerHide, self);
+                self.zoomOverlay.on('show', function() {setZoomerPreShowSession(self)}, self);
+                self.zoomOverlay.on('hide', onZoomerHide, self);
             },
 
-            destructor: function () {
+            destroy: function () {
                 var self = this,
                     img = self.get('imageNode'),
                     imageWrap;
@@ -83,52 +122,58 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
                 img.detach('mouseenter', self.__onImgEnter);
             },
 
-            '_onSetBigImageWidth': function (v) {
+            "_bindCustomEvents": function() {
                 var self = this;
-                self.bigImage.width(v);
-                self.bigImageCopy.width(v);
-            },
+                self.on("afterBigImageWidthChange", function(e) {
+                    var v = e.newVal;
+                    self.bigImage.width(v);
+                    self.bigImageCopy.width(v);
+                });
 
-            '_onSetBigImageHeight': function (v) {
-                var self = this;
-                self.bigImage.height(v);
-                self.bigImageCopy.height(v);
-            },
+                self.on("afterBigImageHeightChange", function(e) {
+                    var v = e.newVal;
+                    self.bigImage.height(v);
+                    self.bigImageCopy.height(v);
+                });
 
-            '_onSetBigImageSrc': function (v) {
-                this.bigImage.attr('src', v);
-            },
+                self.on("afterBigImageSrcChange", function(e) {
+                    var v = e.newVal;
+                    self.bigImage.attr('src', v);
+                });
 
-            '_onSetCurrentMouse': function (currentMouse) {
-                var self = this,
-                    lensLeft,
-                    lensTop,
-                    pageX = currentMouse.pageX,
-                    pageY = currentMouse.pageY,
-                    lens = self.lens,
-                    bigImageOffset;
+                self.on('afterCurrentMouseChange', function(e) {
+                    var currentMouse = e.newVal;
+                    var self = this,
+                        lensLeft,
+                        lensTop,
+                        pageX = currentMouse.pageX,
+                        pageY = currentMouse.pageY,
+                        lens = self.lens,
+                        bigImageOffset;
 
-                // inner 动画中
-                if (self.bigImage.isRunning()) {
-                    return;
-                }
+                    // inner 动画中
+                    if (self.bigImage.isRunning()) {
+                        return;
+                    }
 
-                // 更新 lens 位置
-                if (lens) {
-                    lensLeft = pageX - self.lensWidth / 2;
-                    lensTop = pageY - self.lensHeight / 2;
-                    lens.offset({
-                        left: self.lensLeft = constrain(lensLeft, self.minLensLeft, self.maxLensLeft),
-                        top: self.lensTop = constrain(lensTop, self.minLensTop, self.maxLensTop)
-                    });
-                }
+                    // 更新 lens 位置
+                    if (lens) {
+                        lensLeft = pageX - self.lensWidth / 2;
+                        lensTop = pageY - self.lensHeight / 2;
+                        lens.offset({
+                            left: self.lensLeft = constrain(lensLeft, self.minLensLeft, self.maxLensLeft),
+                            top: self.lensTop = constrain(lensTop, self.minLensTop, self.maxLensTop)
+                        });
+                    }
 
-                // note: 鼠标点对应放大点在中心位置
-                bigImageOffset = getBigImageOffsetFromMouse(self, currentMouse);
+                    // note: 鼠标点对应放大点在中心位置
+                    bigImageOffset = getBigImageOffsetFromMouse(self, currentMouse);
 
-                self.bigImageCopy.css(bigImageOffset);
-                self.bigImage.css(bigImageOffset);
+                    self.bigImageCopy.css(bigImageOffset);
+                    self.bigImage.css(bigImageOffset);
+                });
             }
+
         },
         {
             ATTRS: {
@@ -276,8 +321,6 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
                  */
                 currentMouse: {}
             }
-        }, {
-            xclass: 'imagezoom-viewer'
         });
 
 
@@ -323,12 +366,12 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
 
         if (self.get('type') === INNER) {
             // inner 位置强制修改
-            self.set('align', {
+            self.zoomOverlay.set('align', {
                 node: img,
                 points: ['cc', 'cc']
             });
         } else {
-            align = self.get("align") || {};
+            align = self.zoomOverlay.get("align") || {};
             originNode = align.node;
             delete align.node;
             align = S.clone(align);
@@ -355,12 +398,12 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             image = self.get('imageNode');
 
         imageWrap = self.imageWrap = $(S.substitute(IMAGEZOOM_WRAP_TMPL, {
-            wrapClass: self.get('prefixCls') + 'imagezoom-wrap'
+            wrapClass: self.zoomOverlay.get('prefixCls') + 'imagezoom-wrap'
         })).insertBefore(image, undefinedNode);
 
         imageWrap.prepend(image);
         icon = self.icon = $(S.substitute(IMAGEZOOM_ICON_TMPL, {
-            iconClass: self.get('prefixCls') + 'imagezoom-icon'
+            iconClass: self.zoomOverlay.get('prefixCls') + 'imagezoom-icon'
         }));
         imageWrap.append(icon);
     }
@@ -381,7 +424,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
                         buffer = 0;
                         detachImg(img);
                         setZoomerPreShowSession(self);
-                        self.show();
+                        self.zoomOverlay.show();
                         // after create lens
                         self.lens.show()
                             .css({
@@ -403,7 +446,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             innerFn = S.buffer(function () {
                 detachImg(img);
                 setZoomerPreShowSession(self);
-                self.show();
+                self.zoomOverlay.show();
                 animForInner(self, 0.4, currentMouse);
             }, 50),
             fn = type == 'inner' ? innerFn : commonFn;
@@ -442,7 +485,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             pageY = ev.pageY,
             rh = self.imageHeight;
         if (String(ev.type) == 'mouseleave') {
-            self.hide();
+            self.zoomOverlay.hide();
             return;
         }
         if (pageX > rl && pageX < rl + rw &&
@@ -452,7 +495,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
                 pageY: pageY
             });
         } else {
-            self.hide();
+            self.zoomOverlay.hide();
         }
     }
 
@@ -524,7 +567,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
     return ImageZoom;
 
 }, {
-    requires: ['node', 'overlay']
+    requires: ['node', 'overlay',"base"]
 });
 
 
