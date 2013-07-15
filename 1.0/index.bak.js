@@ -3,7 +3,7 @@
  *  ImageZoom.
  * @author yiminghe@gmail.com, qiaohua@taobao.com
  */
-KISSY.add(function (S, Node, Overlay, Base, undefined) {
+KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
     var $ = Node.all,
         doc = $(S.Env.host.document),
         IMAGEZOOM_ICON_TMPL = "<span class='{iconClass}'></span>",
@@ -16,8 +16,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         groupEventForInnerAnim = '.ks-imagezoom-img-mouse',
         INNER = 'inner',
         ABSOLUTE_STYLE = ' style="position:absolute;top:-9999px;left:-9999px;" ',
-        BIG_IMG_TPL = '<img src=' + '{src} {style} />',
-        zoomOverlay;
+        BIG_IMG_TPL = '<img src=' + '{src} {style} />';
 
     function constrain(v, l, r) {
         return Math.min(Math.max(v, l), r);
@@ -28,192 +27,262 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
      * @class KISSY.ImageZoom
      * @extends KISSY.Overlay
      */
-    function ImageZoom(config) {
-        ImageZoom.superclass.constructor.call(this, config);
-        this._init();
-        this._renderUI(config);
-        this._bindOverlayEvents();
-    }
+    var ImageZoom = Overlay.extend({
 
-    S.extend(ImageZoom, Base, {
-        _init: function() {
-            var self = this;
+            initializer: function () {
+                var self = this;
 
-            if (!self.get("bigImageWidth") || !self.get("bigImageHeight")) {
-                S.error("bigImageWidth/bigImageHeight in ImageZoom must be set!");
+                if (!self.get("bigImageWidth") || !self.get("bigImageHeight")) {
+                    S.error("bigImageWidth/bigImageHeight in ImageZoom must be set!");
+                }
+
+                imageZoomRenderUI(self);
+                imageZoomBindUI(self);
+            },
+
+            renderUI: function () {
+                var self = this,
+                    image = self.get('imageNode'),
+                    contentEl = self.get("contentEl");
+
+                self.bigImage = $(S.substitute(BIG_IMG_TPL, {
+                    src: self.get("bigImageSrc"),
+                    style: ABSOLUTE_STYLE
+                })).appendTo(contentEl, undefined);
+
+                self.bigImageCopy = $(S.substitute(BIG_IMG_TPL, {
+                    src: image.attr('src'),
+                    style: ABSOLUTE_STYLE
+                })).prependTo(contentEl, undefined);
+
+                if (self.get('type') != INNER) {
+                    self.lens = $('<span ' +
+                        ABSOLUTE_STYLE +
+                        ' class="' + self.get('prefixCls') + 'imagezoom-lens' + '"></span>')
+                        .appendTo(self.imageWrap, undefined);
+                }
+            },
+
+            bindUI: function () {
+                var self = this;
+                self.on('hide', onZoomerHide, self);
+            },
+
+            destructor: function () {
+                var self = this,
+                    img = self.get('imageNode'),
+                    imageWrap;
+
+                onZoomerHide.call(self);
+
+                if (imageWrap = self.imageWrap) {
+                    img.insertBefore(imageWrap, undefinedNode);
+                    imageWrap.remove();
+                }
+
+                img.detach('mouseenter', self.__onImgEnter);
+            },
+
+            '_onSetBigImageWidth': function (v) {
+                var self = this;
+                self.bigImage.width(v);
+                self.bigImageCopy.width(v);
+            },
+
+            '_onSetBigImageHeight': function (v) {
+                var self = this;
+                self.bigImage.height(v);
+                self.bigImageCopy.height(v);
+            },
+
+            '_onSetBigImageSrc': function (v) {
+                this.bigImage.attr('src', v);
+            },
+
+            '_onSetCurrentMouse': function (currentMouse) {
+                var self = this,
+                    lensLeft,
+                    lensTop,
+                    pageX = currentMouse.pageX,
+                    pageY = currentMouse.pageY,
+                    lens = self.lens,
+                    bigImageOffset;
+
+                // inner 动画中
+                if (self.bigImage.isRunning()) {
+                    return;
+                }
+
+                // 更新 lens 位置
+                if (lens) {
+                    lensLeft = pageX - self.lensWidth / 2;
+                    lensTop = pageY - self.lensHeight / 2;
+                    lens.offset({
+                        left: self.lensLeft = constrain(lensLeft, self.minLensLeft, self.maxLensLeft),
+                        top: self.lensTop = constrain(lensTop, self.minLensTop, self.maxLensTop)
+                    });
+                }
+
+                // note: 鼠标点对应放大点在中心位置
+                bigImageOffset = getBigImageOffsetFromMouse(self, currentMouse);
+
+                self.bigImageCopy.css(bigImageOffset);
+                self.bigImage.css(bigImageOffset);
             }
-
-            imageZoomRenderUI(self);
-            imageZoomBindUI(self);
         },
-        /**
-         * 渲染的时机控制在鼠标移入的时候
-         * @private
-         */
-        _renderUI: function(config) {
-            var self = this;
-            /**
-             * render Overlay 并渲染对应的大图的部分
-             */
-            renderOverlay(self,config);
-            /**
-             * 生成并展示对应的大图
-             */
+        {
+            ATTRS: {
+                /**
+                 * existing image node needed to be zoomed.
+                 * @cfg {HTMLElement|String} imageNode
+                 */
+                /**
+                 * @ignore
+                 */
+                imageNode: {
+                    setter: function (el) {
+                        return Node.one(el);
+                    }
+                },
 
-        },
-        _bindOverlayEvents: function() {
+                /**
+                 * existing image node's src.
+                 * @type {String}
+                 * @property imageSrc
+                 */
+                /**
+                 * @ignore
+                 */
+                imageSrc: {
+                    valueFn: function () {
+                        return this.get('imageNode').attr('src');
+                    }
+                },
 
-        }
-    }, {
-        ATTRS: {
-            /**
-             * existing image node needed to be zoomed.
-             * @cfg {HTMLElement|String} imageNode
-             */
-            /**
-             * @ignore
-             */
-            imageNode: {
-                setter: function (el) {
-                    return Node.one(el);
-                }
-            },
-
-            /**
-             * existing image node's src.
-             * @type {String}
-             * @property imageSrc
-             */
-            /**
-             * @ignore
-             */
-            imageSrc: {
-                valueFn: function () {
-                    return this.get('imageNode').attr('src');
-                }
-            },
-
-            /**
-             * zoomed overlay width
-             * Defaults to imageNode's width.
-             * @cfg {Number} width
-             */
-            /**
-             * @ignore
-             */
-            width: {
-                valueFn: function () {
-                    return this.get("imageNode").width();
-                }
-            },
-            /**
-             * zoomed overlay height
-             * Defaults to imageNode's height.
-             * @cfg {Number} height
-             */
-            /**
-             * @ignore
-             */
-            height: {
-                valueFn: function () {
-                    return this.get("imageNode").height();
-                }
-            },
-            /**
-             * whether to allow imageNode zoom
-             * @cfg {Boolean} hasZoom
-             */
-            /**
-             * whether to allow imageNode zoom
-             * @type {Boolean}
-             * @property hasZoom
-             */
-            /**
-             * @ignore
-             */
-            hasZoom: {
-                value: true,
-                setter: function (v) {
-                    return !!v;
-                }
-            },
+                /**
+                 * zoomed overlay width
+                 * Defaults to imageNode's width.
+                 * @cfg {Number} width
+                 */
+                /**
+                 * @ignore
+                 */
+                width: {
+                    valueFn: function () {
+                        return this.get("imageNode").width();
+                    }
+                },
+                /**
+                 * zoomed overlay height
+                 * Defaults to imageNode's height.
+                 * @cfg {Number} height
+                 */
+                /**
+                 * @ignore
+                 */
+                height: {
+                    valueFn: function () {
+                        return this.get("imageNode").height();
+                    }
+                },
+                /**
+                 * whether to allow imageNode zoom
+                 * @cfg {Boolean} hasZoom
+                 */
+                /**
+                 * whether to allow imageNode zoom
+                 * @type {Boolean}
+                 * @property hasZoom
+                 */
+                /**
+                 * @ignore
+                 */
+                hasZoom: {
+                    value: true,
+                    setter: function (v) {
+                        return !!v;
+                    }
+                },
 
 
-            /**
-             * type of zooming effect
-             * @cfg {KISSY.ImageZoom.ZoomType} type
-             */
-            /**
-             * @ignore
-             */
-            type: {
-                value: STANDARD   // STANDARD  or INNER
-            },
+                /**
+                 * type of zooming effect
+                 * @cfg {KISSY.ImageZoom.ZoomType} type
+                 */
+                /**
+                 * @ignore
+                 */
+                type: {
+                    value: STANDARD   // STANDARD  or INNER
+                },
 
 
-            /**
-             * big image src.
-             * Default to: value of imageNode's **data-ks-imagezoom** attribute value
-             * @cfg {string} bigImageSrc
-             */
-            /**
-             * big image src.
-             * @type {string}
-             * @property bigImageSrc
-             */
-            /**
-             * @ignore
-             */
-            bigImageSrc: {
-                valueFn: function () {
-                    return  this.get('imageNode').attr('data-ks-imagezoom');
-                }
-            },
+                /**
+                 * big image src.
+                 * Default to: value of imageNode's **data-ks-imagezoom** attribute value
+                 * @cfg {string} bigImageSrc
+                 */
+                /**
+                 * big image src.
+                 * @type {string}
+                 * @property bigImageSrc
+                 */
+                /**
+                 * @ignore
+                 */
+                bigImageSrc: {
+                    valueFn: function () {
+                        return  this.get('imageNode').attr('data-ks-imagezoom');
+                    }
+                },
 
 
-            /**
-             * width of big image
-             * @cfg {Number} bigImageWidth
-             */
-            /**
-             * width of big image
-             * @type {Number}
-             * @property bigImageWidth
-             */
-            /**
-             * @ignore
-             */
-            bigImageWidth: {},
+                /**
+                 * width of big image
+                 * @cfg {Number} bigImageWidth
+                 */
+                /**
+                 * width of big image
+                 * @type {Number}
+                 * @property bigImageWidth
+                 */
+                /**
+                 * @ignore
+                 */
+                bigImageWidth: {},
 
 
-            /**
-             * height of big image
-             * @cfg {Number} bigImageHeight
-             */
-            /**
-             * height of big image
-             * @type {Number}
-             * @property bigImageHeight
-             */
-            /**
-             * @ignore
-             */
-            bigImageHeight: {},
+                /**
+                 * height of big image
+                 * @cfg {Number} bigImageHeight
+                 */
+                /**
+                 * height of big image
+                 * @type {Number}
+                 * @property bigImageHeight
+                 */
+                /**
+                 * @ignore
+                 */
+                bigImageHeight: {},
 
-            /**
-             * current mouse position
-             * @private
-             * @property currentMouse
-             */
-            /**
-             * @ignore
-             */
-            currentMouse: {}
-        }
-    });
+                /**
+                 * current mouse position
+                 * @private
+                 * @property currentMouse
+                 */
+                /**
+                 * @ignore
+                 */
+                currentMouse: {}
+            }
+        }, {
+            xclass: 'imagezoom-viewer'
+        });
+
+
     // # -------------------------- private start
 
-    // 调整overlay的位置以及大小，保持不变
     function setZoomerPreShowSession(self) {
         var img = self.get('imageNode'),
             imageOffset = img.offset(),
@@ -270,41 +339,6 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         doc.on('mousemove mouseleave', onMouseMove, self);
     }
 
-    function renderOverlay(self,config) {
-        if (!zoomOverlay) {
-            zoomOverlay = new Overlay(config);
-            zoomOverlay.render();
-        }
-
-        var image = self.get('imageNode'),
-            contentEl = zoomOverlay.get("contentEl");
-
-        if (!zoomOverlay.bigImage) {
-            zoomOverlay.bigImage = $(S.substitute(BIG_IMG_TPL, {
-                src: self.get("bigImageSrc"),
-                style: ABSOLUTE_STYLE
-            })).appendTo(contentEl, undefined);
-        } else {
-
-        }
-
-        if (!zoomOverlay.bigImageCopy) {
-            zoomOverlay.bigImageCopy = $(S.substitute(BIG_IMG_TPL, {
-                src: image.attr('src'),
-                style: ABSOLUTE_STYLE
-            })).prependTo(contentEl, undefined);
-        } else {}
-
-        // 创建Inner的dom结构
-        if (self.get('type') != INNER) {
-            self.lens = $('<span ' +
-                ABSOLUTE_STYLE +
-                ' class="' + self.get('prefixCls') + 'imagezoom-lens' + '"></span>')
-                .appendTo(self.imageWrap, undefined);
-        }
-    }
-
-    // 控制overlay的展示，目前不调整
     function onZoomerHide() {
         var self = this,
             lens = self.lens;
@@ -315,7 +349,6 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         }
     }
 
-    // 控制icon的渲染，暂不调整
     function imageZoomRenderUI(self) {
         var imageWrap,
             icon,
@@ -332,7 +365,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         imageWrap.append(icon);
     }
 
-    // 控制鼠标已入移出的事件
+
     function imageZoomBindUI(self) {
         var img = self.get('imageNode'),
             currentMouse,
@@ -348,7 +381,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
                         buffer = 0;
                         detachImg(img);
                         setZoomerPreShowSession(self);
-                        zoomOverlay.show();
+                        self.show();
                         // after create lens
                         self.lens.show()
                             .css({
@@ -370,7 +403,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             innerFn = S.buffer(function () {
                 detachImg(img);
                 setZoomerPreShowSession(self);
-                zoomOverlay.show();
+                self.show();
                 animForInner(self, 0.4, currentMouse);
             }, 50),
             fn = type == 'inner' ? innerFn : commonFn;
@@ -409,7 +442,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             pageY = ev.pageY,
             rh = self.imageHeight;
         if (String(ev.type) == 'mouseleave') {
-            zoomOverlay.hide();
+            self.hide();
             return;
         }
         if (pageX > rl && pageX < rl + rw &&
@@ -419,15 +452,15 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
                 pageY: pageY
             });
         } else {
-            zoomOverlay.hide();
+            self.hide();
         }
     }
 
     // Inner 效果中的放大动画
     function animForInner(self, seconds, currentMouse) {
-        var bigImages = zoomOverlay.bigImage;
+        var bigImages = self.bigImage;
 
-        bigImages.add(zoomOverlay.bigImageCopy);
+        bigImages.add(self.bigImageCopy);
 
         bigImages.stop();
 
@@ -454,7 +487,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             self = this,
             bigImageCopy;
         self.get('imageNode').attr('src', src);
-        if (bigImageCopy = zoomOverlay.bigImageCopy) {
+        if (bigImageCopy = self.bigImageCopy) {
             bigImageCopy.attr('src', src);
         }
     }
@@ -491,7 +524,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
     return ImageZoom;
 
 }, {
-    requires: ['node', 'overlay', 'base']
+    requires: ['node', 'overlay']
 });
 
 
