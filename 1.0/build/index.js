@@ -1,9 +1,15 @@
+/*
+combined files : 
+
+gallery/imagezoom/1.0/index
+
+*/
 /**
  * @ignore
  *  ImageZoom.
  * @author yiminghe@gmail.com, qiaohua@taobao.com, qiaofu@taobao.com
  */
-KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
+KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, undefined) {
     var $ = Node.all,
         doc = $(S.Env.host.document),
         IMAGEZOOM_ICON_TMPL = "<span class='{iconClass}'></span>",
