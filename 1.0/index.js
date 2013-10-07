@@ -31,7 +31,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
         // 每一个图片放大有自己的一个overlay,叫zoomer
         this.Zoomer = null;
         // 先从配置中获取config,imageNode的属性必须配置在config中
-        this.config = S.mix(defaultConfig,config);
+        this.config = S.merge(defaultConfig,config);
         // 然后从DOM中合并config
         this._getConfigFromDom();
         this._init();
@@ -53,7 +53,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             self._bindEvents();
         },
         /**
-         * 从dom上面获取Zoom的配置信息
+         * 从dom上面获取Zoom的配置信息,初始化时要调用，重新渲染的时候也要调用
          * @private
          */
         _getConfigFromDom: function() {
@@ -77,7 +77,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
                 domConfig.bigImageSrc = img.attr('data-ks-imagezoom');
             }
 
-            self.config = S.mix(self.config,domConfig);
+            S.mix(self.config,domConfig);
         },
         /*
          * 渲染对应的UI
@@ -356,7 +356,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
     // # -------------------------- private start
 
     function setZoomerPreShowSession(self) {
-        var img = self.get('imageNode'),
+        var img = $(self.config['imageNode']),
             imageOffset = img.offset(),
             imageLeft,
             imageWidth,
@@ -365,10 +365,10 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             zoomMultipleW,
             lensWidth,
             lensHeight,
-            bigImageWidth = self.get('bigImageWidth'),
-            bigImageHeight = self.get('bigImageHeight'),
-            width = self.get('width'),
-            height = self.get('height'),
+            bigImageWidth = self.config['bigImageWidth'],
+            bigImageHeight = self.config['bigImageHeight'],
+            width = self.config['width'],
+            height = self.config['height'],
             align,
             originNode,
             imageTop;
@@ -393,19 +393,19 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
         self.minBigImageLeft = -(bigImageWidth - width);
         self.minBigImageTop = -(bigImageHeight - height);
 
-        if (self.get('type') === INNER) {
+        if (self.config['type'] === INNER) {
             // inner 位置强制修改
-            self.set('align', {
+            self.Zoomer.set('align', {
                 node: img,
                 points: ['cc', 'cc']
             });
         } else {
-            align = self.get("align") || {};
+            align = self.Zoomer.get("align") || {};
             originNode = align.node;
             delete align.node;
             align = S.clone(align);
             align.node = originNode || img;
-            self.set("align", align);
+            self.Zoomer.set("align", align);
         }
         self.icon.hide();
         doc.on('mousemove mouseleave', onMouseMove, self);
@@ -420,22 +420,6 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             lens.hide();
         }
     }
-
-//    function imageZoomRenderUI(self) {
-//        var imageWrap,
-//            icon,
-//            image = self.get('imageNode');
-//
-//        imageWrap = self.imageWrap = $(S.substitute(IMAGEZOOM_WRAP_TMPL, {
-//            wrapClass: self.get('prefixCls') + 'imagezoom-wrap'
-//        })).insertBefore(image, undefinedNode);
-//
-//        imageWrap.prepend(image);
-//        icon = self.icon = $(S.substitute(IMAGEZOOM_ICON_TMPL, {
-//            iconClass: self.get('prefixCls') + 'imagezoom-icon'
-//        }));
-//        imageWrap.append(icon);
-//    }
 
     function imageZoomRenderUI(self) {
         var imageWrap,
@@ -468,7 +452,8 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
     function renderImageZoomer(self) {
         var image = $(self.config["imageNode"]);
         self.Zoomer = new Overlay({
-            elCls:"ks-imagezoom-viewer"
+            elCls:"ks-imagezoom-viewer",
+            align:self.config.align
         });
 
         // 渲染对应的浮层
@@ -487,67 +472,6 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             style: ABSOLUTE_STYLE
         })).prependTo(contentEl, undefined);
     }
-//    function imageZoomBindUI(self) {
-//        var img = self.get('imageNode'),
-//            currentMouse,
-//            type = self.get('type'),
-//            commonFn = (function () {
-//                var buffer;
-//
-//                function t() {
-//                    if (buffer) {
-//                        return;
-//                    }
-//                    buffer = S.later(function () {
-//                        buffer = 0;
-//                        detachImg(img);
-//                        setZoomerPreShowSession(self);
-//                        self.show();
-//                        // after create lens
-//                        self.lens.show()
-//                            .css({
-//                                width: self.lensWidth,
-//                                height: self.lensHeight
-//                            });
-//                        self.set('currentMouse', currentMouse);
-//                    }, 50);
-//                }
-//
-//                t.stop = function () {
-//                    buffer.cancel();
-//                    buffer = 0;
-//                };
-//
-//                return t;
-//            })(),
-//        // prevent flash of content for inner anim
-//            innerFn = S.buffer(function () {
-//                detachImg(img);
-//                setZoomerPreShowSession(self);
-//                self.show();
-//                animForInner(self, 0.4, currentMouse);
-//            }, 50),
-//            fn = type == 'inner' ? innerFn : commonFn;
-//
-//        img.on('mouseenter', self.__onImgEnter = function (ev) {
-//            if (self.get('hasZoom')) {
-//                currentMouse = ev;
-//                img.on('mousemove' + groupEventForInnerAnim,function (ev) {
-//                    currentMouse = ev;
-//                    fn();
-//                }).on('mouseleave' + groupEventForInnerAnim, function () {
-//                        fn.stop();
-//                        detachImg(img);
-//                    });
-//                fn();
-//            }
-//        });
-//
-//        self.on('afterImageSrcChange', onImageZoomSetImageSrc, self);
-//        self.on('afterHasZoomChange', onImageZoomSetHasZoom, self);
-//
-//        onImageZoomSetHasZoom.call(self, {newVal: self.get('hasZoom')});
-//    }
 
     function imageZoomBindUI(self) {
         var img = $(self.config['imageNode']),
@@ -564,7 +488,7 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
                         buffer = 0;
                         detachImg(img);
                         setZoomerPreShowSession(self);
-                        self.show();
+                        self.Zoomer.show();
                         // after create lens
                         self.lens.show()
                             .css({
@@ -625,17 +549,17 @@ KISSY.add(function (S, Node, Overlay, Zoomer, undefined) {
             pageY = ev.pageY,
             rh = self.imageHeight;
         if (String(ev.type) == 'mouseleave') {
-            self.hide();
+            self.Zoomer.hide();
             return;
         }
         if (pageX > rl && pageX < rl + rw &&
             pageY > rt && pageY < rt + rh) {
-            self.set('currentMouse', {
+            self.Zoomer.set('currentMouse', {
                 pageX: pageX,
                 pageY: pageY
             });
         } else {
-            self.hide();
+            self.Zoomer.hide();
         }
     }
 
