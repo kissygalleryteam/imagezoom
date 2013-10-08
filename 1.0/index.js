@@ -1,6 +1,6 @@
 /**
  * @ignore
- *  ImageZoom.
+ * ImageZoom.
  * @author yiminghe@gmail.com, qiaohua@taobao.com, qiaofu@taobao.com
  */
 KISSY.add(function (S, Node, Overlay, Base, undefined) {
@@ -30,6 +30,9 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         type:STANDARD   // STANDARD  or INNER
     };
 
+    // 重构关键, 只使用一个放大器
+    var Zoomer = null;
+
     function Zoom(config) {
         // 每一个图片放大有自己的一个overlay,叫zoomer
         this.Zoomer = null;
@@ -56,7 +59,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             self._bindEvents();
         },
         /**
-         * 从dom上面获取Zoom的配置信息,初始化时要调用，重新渲染的时候也要调用
+         * 从dom上面获取Zoom的配置信息,初始化时要调用
          * @private
          */
         _getConfigFromDom: function() {
@@ -128,8 +131,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
                 self.bigImage.css(bigImageOffset);
             });
 
-            // 放大镜的隐藏功能
-            self.Zoomer.on('hide', onZoomerHide, self);
+
 
             self.on('afterBigImageWidthChange', function(v) {
                 var self = this;
@@ -152,7 +154,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
          */
         destroy: function() {
             var self = this,
-                img = self.config['imageNode'],
+                img = self.get('imageNode'),
                 imageWrap;
 
             onZoomerHide.call(self);
@@ -317,7 +319,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
     // # -------------------------- private start
 
     function setZoomerPreShowSession(self) {
-        var img = $(self.config['imageNode']),
+        var img = $(self.get('imageNode')),
             imageOffset = img.offset(),
             imageLeft,
             imageWidth,
@@ -328,8 +330,8 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             lensHeight,
             bigImageWidth = self.get('bigImageWidth'),
             bigImageHeight = self.get('bigImageHeight'),
-            width = self.config['width'],
-            height = self.config['height'],
+            width = self.get('width'),
+            height = self.get('height'),
             align,
             originNode,
             imageTop;
@@ -356,7 +358,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         self.minBigImageLeft = -(bigImageWidth - width);
         self.minBigImageTop = -(bigImageHeight - height);
 
-        if (self.config['type'] === INNER) {
+        if (self.get('type') === INNER) {
             // inner 位置强制修改
             self.Zoomer.set('align', {
                 node: img,
@@ -388,46 +390,57 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
     function imageZoomRenderUI(self) {
         var imageWrap,
             icon,
-            image = $(self.config['imageNode']);
+            image = $(self.get('imageNode'));
 
         imageWrap = self.imageWrap = $(S.substitute(IMAGEZOOM_WRAP_TMPL, {
-            wrapClass: self.config['prefixCls'] + 'imagezoom-wrap'
+            wrapClass: self.get('prefixCls') + 'imagezoom-wrap'
         })).insertBefore(image, undefinedNode);
 
         imageWrap.prepend(image);
         icon = self.icon = $(S.substitute(IMAGEZOOM_ICON_TMPL, {
-            iconClass: self.config['prefixCls'] + 'imagezoom-icon'
+            iconClass: self.get('prefixCls') + 'imagezoom-icon'
         }));
         imageWrap.append(icon);
 
         renderImageLens(self);
-        renderImageZoomer(self);
+
     }
 
     function renderImageLens(self) {
-        if (self.config['type'] != INNER) {
+        if (self.get('type') != INNER) {
             self.lens = $('<span ' +
                 ABSOLUTE_STYLE +
-                ' class="' + self.config['prefixCls'] + 'imagezoom-lens' + '"></span>')
+                ' class="' + self.get('prefixCls') + 'imagezoom-lens' + '"></span>')
                 .appendTo(self.imageWrap, undefined);
         }
     }
 
     function renderImageZoomer(self) {
-        var image = $(self.config["imageNode"]);
+        var image = $(self.get("imageNode"));
 
-        var width = self.config['width'] = (self.config['width'] === 'auto') ? image.width() : self.config['width'],
-            height = self.config['height'] = (self.config['height'] === 'auto') ? image.height() : self.config['height'];
+        if (self.get('width') == 'auto') {
+            self.set('width', image.width());
+        }
+
+        if (self.get('height') == 'auto') {
+            self.set('height', image.height());
+        }
+
+        var width = self.get('width'),
+            height = self.get('height');
 
         self.Zoomer = new Overlay({
             elCls:"ks-imagezoom-viewer",
-            align:self.config.align,
+            align:self.get('align'),
             width:width,
             height:height
         });
 
         // 渲染对应的浮层
         self.Zoomer.render();
+
+        // 放大镜的隐藏功能
+        self.Zoomer.on('hide', onZoomerHide, self);
 
         // 渲染对应的大图
         var contentEl = self.Zoomer.get("contentEl");
@@ -444,9 +457,9 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
     }
 
     function imageZoomBindUI(self) {
-        var img = $(self.config['imageNode']),
+        var img = $(self.get('imageNode')),
             currentMouse,
-            type = self.config['type'],
+            type = self.get('type'),
             commonFn = (function () {
                 var buffer;
 
@@ -485,6 +498,11 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             fn = type == 'inner' ? innerFn : commonFn;
 
         img.on('mouseenter', self.__onImgEnter = function (ev) {
+            // 在此刻初始化overlay
+            if (!self.Zoomer) {
+                renderImageZoomer(self);
+            }
+
             if (self.get('hasZoom')) {
                 currentMouse = ev;
                 img.on('mousemove' + groupEventForInnerAnim,function (ev) {
@@ -562,15 +580,15 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         var src = e.newVal,
             self = this,
             bigImageCopy;
-        $(self.config['imageNode']).attr('src', src);
+        $(self.get('imageNode')).attr('src', src);
         if (bigImageCopy = self.bigImageCopy) {
             bigImageCopy.attr('src', src);
         }
     }
 
     function getBigImageOffsetFromMouse(self, currentMouse) {
-        var width = self.config['width'],
-            height = self.config['height'];
+        var width = self.get('width'),
+            height = self.get('height');
 
         return {
             left: constrain(-(currentMouse.pageX - self.imageLeft)
@@ -608,6 +626,9 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
 /**
  * @ignore
  * NOTES:
+ * 2013-10-08 qiaofu@taobao.com
+ *  - 重构, 去掉了对Overlay的继承
+ *
  * 2012-12-17 yiminghe@gmail.com
  *  - refactor and document
  *  - TODO extend overlay ?? confused
