@@ -9,7 +9,7 @@ gallery/imagezoom/1.0/index
  *  ImageZoom.
  * @author yiminghe@gmail.com, qiaohua@taobao.com, qiaofu@taobao.com
  */
-KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, undefined) {
+KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefined) {
     var $ = Node.all,
         doc = $(S.Env.host.document),
         IMAGEZOOM_ICON_TMPL = "<span class='{iconClass}'></span>",
@@ -30,6 +30,9 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
 
     var defaultConfig = {
         prefixCls:"ks-",
+        hasZoom:true,
+        width:"auto",
+        height:"auto",
         type:STANDARD   // STANDARD  or INNER
     };
 
@@ -97,7 +100,37 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
          * 绑定事件
          */
         _bindEvents: function() {
+            var self = this;
+            // 绑定事件
+            self.on('currentMouseChange', function(currentMouse) {
+                var lensLeft,
+                    lensTop,
+                    pageX = currentMouse.pageX,
+                    pageY = currentMouse.pageY,
+                    lens = self.lens,
+                    bigImageOffset;
 
+                // inner 动画中
+                if (self.bigImage.isRunning()) {
+                    return;
+                }
+
+                // 更新 lens 位置
+                if (lens) {
+                    lensLeft = pageX - self.lensWidth / 2;
+                    lensTop = pageY - self.lensHeight / 2;
+                    lens.offset({
+                        left: self.lensLeft = constrain(lensLeft, self.minLensLeft, self.maxLensLeft),
+                        top: self.lensTop = constrain(lensTop, self.minLensTop, self.maxLensTop)
+                    });
+                }
+
+                // note: 鼠标点对应放大点在中心位置
+                bigImageOffset = getBigImageOffsetFromMouse(self, currentMouse);
+
+                self.bigImageCopy.css(bigImageOffset);
+                self.bigImage.css(bigImageOffset);
+            })
         }
     });
     /**
@@ -175,38 +208,11 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
 
             '_onSetBigImageSrc': function (v) {
                 this.bigImage.attr('src', v);
-            },
-
-            '_onSetCurrentMouse': function (currentMouse) {
-                var self = this,
-                    lensLeft,
-                    lensTop,
-                    pageX = currentMouse.pageX,
-                    pageY = currentMouse.pageY,
-                    lens = self.lens,
-                    bigImageOffset;
-
-                // inner 动画中
-                if (self.bigImage.isRunning()) {
-                    return;
-                }
-
-                // 更新 lens 位置
-                if (lens) {
-                    lensLeft = pageX - self.lensWidth / 2;
-                    lensTop = pageY - self.lensHeight / 2;
-                    lens.offset({
-                        left: self.lensLeft = constrain(lensLeft, self.minLensLeft, self.maxLensLeft),
-                        top: self.lensTop = constrain(lensTop, self.minLensTop, self.maxLensTop)
-                    });
-                }
-
-                // note: 鼠标点对应放大点在中心位置
-                bigImageOffset = getBigImageOffsetFromMouse(self, currentMouse);
-
-                self.bigImageCopy.css(bigImageOffset);
-                self.bigImage.css(bigImageOffset);
             }
+//
+//            '_onSetCurrentMouse': function (currentMouse) {
+//
+//            }
         },
         {
             ATTRS: {
@@ -414,6 +420,7 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
             self.Zoomer.set("align", align);
         }
         self.icon.hide();
+
         doc.on('mousemove mouseleave', onMouseMove, self);
     }
 
@@ -457,9 +464,15 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
 
     function renderImageZoomer(self) {
         var image = $(self.config["imageNode"]);
+
+        var width = (self.config['width'] === 'auto') ? image.width() : self.config['width'],
+            height = (self.config['height'] === 'auto') ? image.height() : self.config['height'];
+
         self.Zoomer = new Overlay({
             elCls:"ks-imagezoom-viewer",
-            align:self.config.align
+            align:self.config.align,
+            width:width,
+            height:height
         });
 
         // 渲染对应的浮层
@@ -501,7 +514,7 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
                                 width: self.lensWidth,
                                 height: self.lensHeight
                             });
-                        self.set('currentMouse', currentMouse);
+                        self.fire('currentMouseChange',currentMouse);
                     }, 50);
                 }
 
@@ -509,14 +522,13 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
                     buffer.cancel();
                     buffer = 0;
                 };
-
                 return t;
             })(),
         // prevent flash of content for inner anim
             innerFn = S.buffer(function () {
                 detachImg(img);
                 setZoomerPreShowSession(self);
-                self.show();
+                self.Zoomer.show();
                 animForInner(self, 0.4, currentMouse);
             }, 50),
             fn = type == 'inner' ? innerFn : commonFn;
@@ -560,7 +572,7 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
         }
         if (pageX > rl && pageX < rl + rw &&
             pageY > rt && pageY < rt + rh) {
-            self.Zoomer.set('currentMouse', {
+            self.fire("currentMouseChange", {
                 pageX: pageX,
                 pageY: pageY
             });
@@ -586,8 +598,8 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
         });
 
         bigImages.animate(S.mix({
-            width: self.get('bigImageWidth'),
-            height: self.get('bigImageHeight')
+            width: self.config['bigImageWidth'],
+            height: self.config['bigImageHeight']
         }, getBigImageOffsetFromMouse(self, currentMouse)), seconds);
     }
 
@@ -606,8 +618,8 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
     }
 
     function getBigImageOffsetFromMouse(self, currentMouse) {
-        var width = self.get('width'),
-            height = self.get('height');
+        var width = self.config['width'],
+            height = self.config['height'];
         return {
             left: constrain(-(currentMouse.pageX - self.imageLeft)
                 * self.zoomMultipleW + width / 2, self.minBigImageLeft, self.maxBigImageLeft),
@@ -637,7 +649,7 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Zoomer, unde
     return Zoom;
 
 }, {
-    requires: ['node', 'overlay']
+    requires: ['node', 'overlay', 'base']
 });
 
 
