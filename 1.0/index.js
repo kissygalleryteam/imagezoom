@@ -81,6 +81,8 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             }
 
             S.mix(self.config,domConfig);
+            // 把配置的json写成Attribute
+            self.set(self.config);
         },
         /*
          * 渲染对应的UI
@@ -121,6 +123,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
 
                 // note: 鼠标点对应放大点在中心位置
                 bigImageOffset = getBigImageOffsetFromMouse(self, currentMouse);
+
                 self.bigImageCopy.css(bigImageOffset);
                 self.bigImage.css(bigImageOffset);
             });
@@ -323,8 +326,8 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             zoomMultipleW,
             lensWidth,
             lensHeight,
-            bigImageWidth = self.config['bigImageWidth'],
-            bigImageHeight = self.config['bigImageHeight'],
+            bigImageWidth = self.get('bigImageWidth'),
+            bigImageHeight = self.get('bigImageHeight'),
             width = self.config['width'],
             height = self.config['height'],
             align,
@@ -338,6 +341,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         imageHeight = self.imageHeight = img.height();
         zoomMultipleH = self.zoomMultipleH = bigImageHeight / imageHeight;
         zoomMultipleW = self.zoomMultipleW = bigImageWidth / imageWidth;
+
         // 考虑放大可视区域，大图，与实际小图
         // 镜片大小和小图的关系相当于放大可视区域与大图的关系
         // 计算镜片宽高, vH / bigImageH = lensH / imageH
@@ -429,7 +433,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         var contentEl = self.Zoomer.get("contentEl");
 
         self.bigImage = $(S.substitute(BIG_IMG_TPL, {
-            src: self.config["bigImageSrc"],
+            src: self.get("bigImageSrc"),
             style: ABSOLUTE_STYLE
         })).appendTo(contentEl, undefined);
 
@@ -481,7 +485,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             fn = type == 'inner' ? innerFn : commonFn;
 
         img.on('mouseenter', self.__onImgEnter = function (ev) {
-            if (self.config['hasZoom']) {
+            if (self.get('hasZoom')) {
                 currentMouse = ev;
                 img.on('mousemove' + groupEventForInnerAnim,function (ev) {
                     currentMouse = ev;
@@ -497,7 +501,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         self.on('afterImageSrcChange', onImageZoomSetImageSrc, self);
         self.on('afterHasZoomChange', onImageZoomSetHasZoom, self);
 
-        onImageZoomSetHasZoom.call(self, {newVal: self.config["hasZoom"]});
+        onImageZoomSetHasZoom.call(self, {newVal: self.get("hasZoom")});
     }
 
     function detachImg(img) {
@@ -545,8 +549,8 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         });
 
         bigImages.animate(S.mix({
-            width: self.config['bigImageWidth'],
-            height: self.config['bigImageHeight']
+            width: self.get('bigImageWidth'),
+            height: self.get('bigImageHeight')
         }, getBigImageOffsetFromMouse(self, currentMouse)), seconds);
     }
 
@@ -567,9 +571,6 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
     function getBigImageOffsetFromMouse(self, currentMouse) {
         var width = self.config['width'],
             height = self.config['height'];
-
-        console.log(width);
-        console.log(height);
 
         return {
             left: constrain(-(currentMouse.pageX - self.imageLeft)
