@@ -40,7 +40,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         this._init();
     }
 
-    S.augment(Zoom, S.EventTarget, {
+    S.extend(Zoom, Base, {
         /*
          * 内部初始化方法
          */
@@ -121,243 +121,195 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
 
                 // note: 鼠标点对应放大点在中心位置
                 bigImageOffset = getBigImageOffsetFromMouse(self, currentMouse);
-
                 self.bigImageCopy.css(bigImageOffset);
                 self.bigImage.css(bigImageOffset);
-            })
-        }
-    });
-    /**
-     * image zoomer for kissy
-     * @class KISSY.ImageZoom
-     * @extends KISSY.Overlay
-     */
-    var ImageZoom = Overlay.extend({
+            });
 
-//            initializer: function () {
-//                var self = this;
-//
-//                if (!self.get("bigImageWidth") || !self.get("bigImageHeight")) {
-//                    S.error("bigImageWidth/bigImageHeight in ImageZoom must be set!");
-//                }
-//
-//                imageZoomRenderUI(self);
-//                imageZoomBindUI(self);
-//            },
+            // 放大镜的隐藏功能
+            self.Zoomer.on('hide', onZoomerHide, self);
 
-//            renderUI: function () {
-//                var self = this,
-//                    image = self.get('imageNode'),
-//                    contentEl = self.get("contentEl");
-//
-//                self.bigImage = $(S.substitute(BIG_IMG_TPL, {
-//                    src: self.get("bigImageSrc"),
-//                    style: ABSOLUTE_STYLE
-//                })).appendTo(contentEl, undefined);
-//
-//                self.bigImageCopy = $(S.substitute(BIG_IMG_TPL, {
-//                    src: image.attr('src'),
-//                    style: ABSOLUTE_STYLE
-//                })).prependTo(contentEl, undefined);
-//
-//                if (self.get('type') != INNER) {
-//                    self.lens = $('<span ' +
-//                        ABSOLUTE_STYLE +
-//                        ' class="' + self.get('prefixCls') + 'imagezoom-lens' + '"></span>')
-//                        .appendTo(self.imageWrap, undefined);
-//                }
-//            },
-
-            bindUI: function () {
+            self.on('afterBigImageWidthChange', function(v) {
                 var self = this;
-                self.on('hide', onZoomerHide, self);
-            },
+                self.bigImage.width(v.newVal);
+                self.bigImageCopy.width(v.newVal);
+            });
 
-            destructor: function () {
-                var self = this,
-                    img = self.get('imageNode'),
-                    imageWrap;
-
-                onZoomerHide.call(self);
-
-                if (imageWrap = self.imageWrap) {
-                    img.insertBefore(imageWrap, undefinedNode);
-                    imageWrap.remove();
-                }
-
-                img.detach('mouseenter', self.__onImgEnter);
-            },
-
-            '_onSetBigImageWidth': function (v) {
+            self.on('afterBigImageHeightChange', function(v) {
                 var self = this;
-                self.bigImage.width(v);
-                self.bigImageCopy.width(v);
-            },
+                self.bigImage.height(v.newVal);
+                self.bigImageCopy.height(v.newVal);
+            });
 
-            '_onSetBigImageHeight': function (v) {
-                var self = this;
-                self.bigImage.height(v);
-                self.bigImageCopy.height(v);
-            },
-
-            '_onSetBigImageSrc': function (v) {
-                this.bigImage.attr('src', v);
-            }
-//
-//            '_onSetCurrentMouse': function (currentMouse) {
-//
-//            }
+            self.on('afterBigImageSrcChange', function(v) {
+                self.bigImage.attr('src', v.newVal);
+            });
         },
-        {
-            ATTRS: {
-                /**
-                 * existing image node needed to be zoomed.
-                 * @cfg {HTMLElement|String} imageNode
-                 */
-                /**
-                 * @ignore
-                 */
-                imageNode: {
-                    setter: function (el) {
-                        return Node.one(el);
-                    }
-                },
+        /**
+         * 销毁组件
+         */
+        destroy: function() {
+            var self = this,
+                img = self.config['imageNode'],
+                imageWrap;
 
-                /**
-                 * existing image node's src.
-                 * @type {String}
-                 * @property imageSrc
-                 */
-                /**
-                 * @ignore
-                 */
-                imageSrc: {
-                    valueFn: function () {
-                        return this.get('imageNode').attr('src');
-                    }
-                },
+            onZoomerHide.call(self);
 
-                /**
-                 * zoomed overlay width
-                 * Defaults to imageNode's width.
-                 * @cfg {Number} width
-                 */
-                /**
-                 * @ignore
-                 */
-                width: {
-                    valueFn: function () {
-                        return this.get("imageNode").width();
-                    }
-                },
-                /**
-                 * zoomed overlay height
-                 * Defaults to imageNode's height.
-                 * @cfg {Number} height
-                 */
-                /**
-                 * @ignore
-                 */
-                height: {
-                    valueFn: function () {
-                        return this.get("imageNode").height();
-                    }
-                },
-                /**
-                 * whether to allow imageNode zoom
-                 * @cfg {Boolean} hasZoom
-                 */
-                /**
-                 * whether to allow imageNode zoom
-                 * @type {Boolean}
-                 * @property hasZoom
-                 */
-                /**
-                 * @ignore
-                 */
-                hasZoom: {
-                    value: true,
-                    setter: function (v) {
-                        return !!v;
-                    }
-                },
-
-
-                /**
-                 * type of zooming effect
-                 * @cfg {KISSY.ImageZoom.ZoomType} type
-                 */
-                /**
-                 * @ignore
-                 */
-                type: {
-                    value: STANDARD   // STANDARD  or INNER
-                },
-
-
-                /**
-                 * big image src.
-                 * Default to: value of imageNode's **data-ks-imagezoom** attribute value
-                 * @cfg {string} bigImageSrc
-                 */
-                /**
-                 * big image src.
-                 * @type {string}
-                 * @property bigImageSrc
-                 */
-                /**
-                 * @ignore
-                 */
-                bigImageSrc: {
-                    valueFn: function () {
-                        return  this.get('imageNode').attr('data-ks-imagezoom');
-                    }
-                },
-
-
-                /**
-                 * width of big image
-                 * @cfg {Number} bigImageWidth
-                 */
-                /**
-                 * width of big image
-                 * @type {Number}
-                 * @property bigImageWidth
-                 */
-                /**
-                 * @ignore
-                 */
-                bigImageWidth: {},
-
-
-                /**
-                 * height of big image
-                 * @cfg {Number} bigImageHeight
-                 */
-                /**
-                 * height of big image
-                 * @type {Number}
-                 * @property bigImageHeight
-                 */
-                /**
-                 * @ignore
-                 */
-                bigImageHeight: {},
-
-                /**
-                 * current mouse position
-                 * @private
-                 * @property currentMouse
-                 */
-                /**
-                 * @ignore
-                 */
-                currentMouse: {}
+            if (imageWrap = self.imageWrap) {
+                img.insertBefore(imageWrap, undefinedNode);
+                imageWrap.remove();
             }
-        }, {
-            xclass: 'imagezoom-viewer'
-        });
 
+            img.detach('mouseenter', self.__onImgEnter);
+        }
+    },{
+        ATTRS:{
+            /**
+             * existing image node needed to be zoomed.
+             * @cfg {HTMLElement|String} imageNode
+             */
+            /**
+             * @ignore
+             */
+            imageNode: {
+                setter: function (el) {
+                    return Node.one(el);
+                }
+            },
+
+            /**
+             * existing image node's src.
+             * @type {String}
+             * @property imageSrc
+             */
+            /**
+             * @ignore
+             */
+            imageSrc: {
+                valueFn: function () {
+                    return this.get('imageNode').attr('src');
+                }
+            },
+
+            /**
+             * zoomed overlay width
+             * Defaults to imageNode's width.
+             * @cfg {Number} width
+             */
+            /**
+             * @ignore
+             */
+            width: {
+                valueFn: function () {
+                    return this.get("imageNode").width();
+                }
+            },
+            /**
+             * zoomed overlay height
+             * Defaults to imageNode's height.
+             * @cfg {Number} height
+             */
+            /**
+             * @ignore
+             */
+            height: {
+                valueFn: function () {
+                    return this.get("imageNode").height();
+                }
+            },
+            /**
+             * whether to allow imageNode zoom
+             * @cfg {Boolean} hasZoom
+             */
+            /**
+             * whether to allow imageNode zoom
+             * @type {Boolean}
+             * @property hasZoom
+             */
+            /**
+             * @ignore
+             */
+            hasZoom: {
+                value: true,
+                setter: function (v) {
+                    return !!v;
+                }
+            },
+
+
+            /**
+             * type of zooming effect
+             * @cfg {KISSY.ImageZoom.ZoomType} type
+             */
+            /**
+             * @ignore
+             */
+            type: {
+                value: STANDARD   // STANDARD  or INNER
+            },
+
+
+            /**
+             * big image src.
+             * Default to: value of imageNode's **data-ks-imagezoom** attribute value
+             * @cfg {string} bigImageSrc
+             */
+            /**
+             * big image src.
+             * @type {string}
+             * @property bigImageSrc
+             */
+            /**
+             * @ignore
+             */
+            bigImageSrc: {
+                valueFn: function () {
+                    return  this.get('imageNode').attr('data-ks-imagezoom');
+                }
+            },
+
+
+            /**
+             * width of big image
+             * @cfg {Number} bigImageWidth
+             */
+            /**
+             * width of big image
+             * @type {Number}
+             * @property bigImageWidth
+             */
+            /**
+             * @ignore
+             */
+            bigImageWidth: {},
+
+
+            /**
+             * height of big image
+             * @cfg {Number} bigImageHeight
+             */
+            /**
+             * height of big image
+             * @type {Number}
+             * @property bigImageHeight
+             */
+            /**
+             * @ignore
+             */
+            bigImageHeight: {},
+
+            /**
+             * current mouse position
+             * @private
+             * @property currentMouse
+             */
+            /**
+             * @ignore
+             */
+            currentMouse: {}
+        }
+    },{
+        xclass: 'imagezoom-viewer'
+    });
 
     // # -------------------------- private start
 
@@ -380,6 +332,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             imageTop;
 
         imageLeft = self.imageLeft = imageOffset.left;
+
         imageTop = self.imageTop = imageOffset.top;
         imageWidth = self.imageWidth = img.width();
         imageHeight = self.imageHeight = img.height();
@@ -459,8 +412,8 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
     function renderImageZoomer(self) {
         var image = $(self.config["imageNode"]);
 
-        var width = (self.config['width'] === 'auto') ? image.width() : self.config['width'],
-            height = (self.config['height'] === 'auto') ? image.height() : self.config['height'];
+        var width = self.config['width'] = (self.config['width'] === 'auto') ? image.width() : self.config['width'],
+            height = self.config['height'] = (self.config['height'] === 'auto') ? image.height() : self.config['height'];
 
         self.Zoomer = new Overlay({
             elCls:"ks-imagezoom-viewer",
@@ -552,7 +505,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         img.detach('mousemove' + groupEventForInnerAnim);
     }
 
-    function onMouseMove(ev) {
+    function onMouseMove(ev){
         var self = this,
             rl = self.imageLeft,
             rt = self.imageTop,
@@ -605,7 +558,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         var src = e.newVal,
             self = this,
             bigImageCopy;
-        self.get('imageNode').attr('src', src);
+        $(self.config['imageNode']).attr('src', src);
         if (bigImageCopy = self.bigImageCopy) {
             bigImageCopy.attr('src', src);
         }
@@ -614,6 +567,10 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
     function getBigImageOffsetFromMouse(self, currentMouse) {
         var width = self.config['width'],
             height = self.config['height'];
+
+        console.log(width);
+        console.log(height);
+
         return {
             left: constrain(-(currentMouse.pageX - self.imageLeft)
                 * self.zoomMultipleW + width / 2, self.minBigImageLeft, self.maxBigImageLeft),
@@ -629,7 +586,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
      * zoom mode for imagezoom
      * @enum {String} KISSY.ImageZoom.ZoomType
      */
-    ImageZoom.ZoomType = {
+    Zoom.ZoomType = {
         /**
          * zoom overlay is beside imageNode
          */
