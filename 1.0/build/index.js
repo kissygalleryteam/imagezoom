@@ -36,9 +36,6 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
         type:STANDARD   // STANDARD  or INNER
     };
 
-    // 重构关键, 只使用一个放大器
-    var Zoomer = null;
-
     function Zoom(config) {
         // 每一个图片放大有自己的一个overlay,叫zoomer
         this.Zoomer = null;
