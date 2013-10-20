@@ -131,17 +131,26 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
 
             self.on('afterBigImageWidthChange', function(v) {
                 var self = this;
+                if (!self.bigImage) {
+                    return;
+                }
                 self.bigImage.width(v.newVal);
                 self.bigImageCopy.width(v.newVal);
             });
 
             self.on('afterBigImageHeightChange', function(v) {
                 var self = this;
+                if (!self.bigImage) {
+                    return;
+                }
                 self.bigImage.height(v.newVal);
                 self.bigImageCopy.height(v.newVal);
             });
 
             self.on('afterBigImageSrcChange', function(v) {
+                if (!self.bigImage) {
+                    return;
+                }
                 self.bigImage.attr('src', v.newVal);
             });
         },
@@ -235,7 +244,7 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
          */
         hasZoom: {
             value: true,
-                setter: function (v) {
+            setter: function (v) {
                 return !!v;
             }
         },
@@ -284,9 +293,7 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
         /**
          * @ignore
          */
-        bigImageWidth: {},
-
-
+        bigImageWidth:{},
         /**
          * height of big image
          * @cfg {Number} bigImageHeight
@@ -414,14 +421,6 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
 
     function renderImageZoomer(self) {
         var image = $(self.get("imageNode"));
-
-//        if (self.get('width') == 'auto') {
-//            self.set('width', image.width());
-//        }
-//
-//        if (self.get('height') == 'auto') {
-//            self.set('height', image.height());
-//        }
 
         var width = self.get('width'),
             height = self.get('height');
