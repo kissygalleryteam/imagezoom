@@ -92,6 +92,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             var self = this;
             // 绑定事件
             self.on('currentMouseChange', function(currentMouse) {
+                S.log(1);
                 var lensLeft,
                     lensTop,
                     pageX = currentMouse.pageX,
@@ -489,7 +490,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
 
         img.on('mouseenter', self.__onImgEnter = function (ev) {
             // 在此刻初始化overlay
-            if (!self.Zoomer) {
+            if (!self.Zoomer && self.get('hasZoom')) {
                 renderImageZoomer(self);
             }
 
