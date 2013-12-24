@@ -98,7 +98,6 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
             var self = this;
             // 绑定事件
             self.on('currentMouseChange', function(currentMouse) {
-                S.log(1);
                 var lensLeft,
                     lensTop,
                     pageX = currentMouse.pageX,
