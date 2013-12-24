@@ -489,7 +489,7 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
 
         img.on('mouseenter', self.__onImgEnter = function (ev) {
             // 在此刻初始化overlay
-            if (!self.Zoomer) {
+            if (!self.Zoomer && self.get('hasZoom')) {
                 renderImageZoomer(self);
             }
 
