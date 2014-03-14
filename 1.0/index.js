@@ -209,6 +209,10 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         width: {
             valueFn: function () {
                 return this.get("imageNode").width();
+            },
+            // 设置width的时候，默认转换为数值型
+            setter: function(v) {
+                return parseInt(v,10);
             }
         },
         /**
@@ -222,6 +226,10 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
         height: {
             valueFn: function () {
                 return this.get("imageNode").height();
+            },
+            // 设置height的时候，默认转换为数值型
+            setter: function(v) {
+                return parseInt(v,10);
             }
         },
         /**

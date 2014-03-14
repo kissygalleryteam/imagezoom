@@ -73,3 +73,32 @@ ImageZoom (config)
 **imageSrc**
 
   {String} - 修改此属性改变小图地址
+
+## 请注意
+
+KISSY 1.4中，由于Overlay的show和hide改为了修改浮层的class，而非直接修改浮层的css的visibility样式。
+
+因此使用ImageZoom的时候，需要自己加上默认的Overlay样式，你也可以在此样式的基础上添加自己需要的css3过渡效果:)
+
+    <style>
+        .ks-overlay {
+            position:absolute;
+            left:-9999px;
+            top:-9999px;
+        }
+        .ks-overlay-hidden {
+            visibility: hidden;
+        }
+
+        .ks-overlay-mask-hidden {
+            display: none;
+        }
+
+        .ks-overlay-shown {
+            visibility: visible;
+        }
+
+        .ks-overlay-mask-shown{
+            display: block;
+        }
+    </style>
