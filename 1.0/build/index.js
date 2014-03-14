@@ -215,6 +215,10 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
         width: {
             valueFn: function () {
                 return this.get("imageNode").width();
+            },
+            // 设置width的时候，默认转换为数值型
+            setter: function(v) {
+                return parseInt(v,10);
             }
         },
         /**
@@ -228,6 +232,10 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
         height: {
             valueFn: function () {
                 return this.get("imageNode").height();
+            },
+            // 设置height的时候，默认转换为数值型
+            setter: function(v) {
+                return parseInt(v,10);
             }
         },
         /**
