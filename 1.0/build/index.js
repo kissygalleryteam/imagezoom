@@ -11,7 +11,7 @@ gallery/imagezoom/1.0/index
  */
 KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefined) {
     var $ = Node.all,
-        doc = $(S.Env.host.document),
+        doc = $(document),
         IMAGEZOOM_ICON_TMPL = "<span class='{iconClass}'></span>",
         undefinedNode = /**
          @ignore
