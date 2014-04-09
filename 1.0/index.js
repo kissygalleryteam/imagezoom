@@ -5,7 +5,7 @@
  */
 KISSY.add(function (S, Node, Overlay, Base, undefined) {
     var $ = Node.all,
-        doc = $(S.Env.host.document),
+        doc = $(document),
         IMAGEZOOM_ICON_TMPL = "<span class='{iconClass}'></span>",
         undefinedNode = /**
          @ignore
