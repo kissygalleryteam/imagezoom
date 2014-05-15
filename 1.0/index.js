@@ -452,6 +452,12 @@ KISSY.add(function (S, Node, Overlay, Base, undefined) {
             src: image.attr('src'),
             style: ABSOLUTE_STYLE
         })).prependTo(contentEl, undefined);
+
+        // copy的小图片宽度设定和大图片一样
+        self.bigImageCopy.css({
+            "width" : self.get('bigImageWidth'),
+            "height" : self.get('bigImageHeight')
+        });
     }
 
     function imageZoomBindUI(self) {
