@@ -51,7 +51,12 @@
              data-ks-imagezoom="http://img06.taobaocdn.com/imgextra/i6/354823861/T2vWNlXbFdXXXXXXXX_!!354823861.jpg"/>
     </li>
 
+
 </ul>
+<div class="transparent">
+    <img id="transparent" src="http://img03.taobaocdn.com/bao/uploaded/i3/T1f7IaFP8XXXXXXXXX_!!2-item_pic.png_400x400.jpg"
+         data-ks-imagezoom="http://img03.taobaocdn.com/bao/uploaded/i3/T1f7IaFP8XXXXXXXXX_!!2-item_pic.png"/>
+</div>
 
 <script>
     var S = KISSY;
@@ -122,6 +127,16 @@
                         parseInt(DOM.attr(this, 'data-bigImageWidth')));
                 m.set("bigImageHeight",
                         parseInt(DOM.attr(this, 'data-bigImageHeight')))
+            }
+        });
+
+        new ImageZoom({
+            imageNode:"#transparent",
+            bigImageWidth: 750,
+            bigImageHeight: 562,
+            align: {
+                points: ["tr", "tl"],
+                offset: [0, 0]
             }
         });
     })
