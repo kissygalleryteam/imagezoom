@@ -459,7 +459,7 @@ KISSY.add('gallery/imagezoom/1.0/index',function (S, Node, Overlay, Base, undefi
             style: ABSOLUTE_STYLE
         })).prependTo(contentEl, undefined);
 
-        // copy的小图片宽度设定和大图片一样
+        // 初始化的时候，copy的小图片宽度设定和大图片一样
         self.bigImageCopy.css({
             "width" : self.get('bigImageWidth'),
             "height" : self.get('bigImageHeight')
