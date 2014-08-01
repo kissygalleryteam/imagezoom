@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>demo标题</title>
+    <script src="http://a.tbcdn.cn/s/kissy/1.3.0/kissy-min.js" charset="utf-8"></script>
+    <link href="./index.css" rel="stylesheet" type="text/css" />
+<script>var S = KISSY;S.config({packages:[{name:"kg",path:"http://g.tbcdn.cn/kg/",charset:"utf-8",ignorePackageNameInUri:true}]});if (S.Config.debug){var srcPath = "../";S.config({packages:[{name:"kg/imagezoom/2.0.0",path:srcPath,charset:"utf-8",ignorePackageNameInUri:true}]});}</script></head>
+<body>
+
+<h2>内嵌模式</h2>
+
+<div class="demo">
+    <img id="inner" src="http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg_310x310.jpg"/>
+</div>
+
+<h2>设置高宽加载</h2>
+
+<div class="demo">
+    <a href="#"><img id="multi2"
+                     data-ks-imagezoom="http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg"
+                     src="http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg_310x310.jpg"/></a>
+</div>
+
+
+<h2>多图加载</h2>
+
+<div class="demo">
+    <a href="#"><img id="multi"
+                     data-ks-imagezoom="http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg"
+                     src="http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg_310x310.jpg"/></a>
+</div>
+<ul id="imgList">
+
+    <li>
+        <img data-ks-imagezoom="http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg"
+             data-has-zoom="true"
+             data-bigImageWidth="900"
+             data-bigImageHeight="900"
+             src="http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg_40x40.jpg"/>
+    </li>
+    <li>
+        <img src="http://img05.taobaocdn.com/imgextra/i5/T1DERIXmXsXXa26X.Z_031259.jpg_40x40.jpg"
+             data-ks-imagezoom="http://img05.taobaocdn.com/imgextra/i5/T1DERIXmXsXXa26X.Z_031259.jpg"/>
+    </li>
+    <li>
+        <img src="http://img06.taobaocdn.com/imgextra/i6/354823861/T2vWNlXbFdXXXXXXXX_!!354823861.jpg_40x40.jpg"
+             data-has-zoom="true"
+             data-bigImageWidth="700"
+             data-bigImageHeight="700"
+             data-ks-imagezoom="http://img06.taobaocdn.com/imgextra/i6/354823861/T2vWNlXbFdXXXXXXXX_!!354823861.jpg"/>
+    </li>
+
+</ul>
+
+<script>
+    var S = KISSY;
+    if (S.Config.debug) {
+        var srcPath = "../../../";
+        S.config({
+            packages:[
+                {
+                    name:"gallery-back",
+                    path:srcPath,
+                    charset:"utf-8",
+                    ignorePackageNameInUri:true
+                }
+            ]
+        });
+    }
+
+    S.use('dom,event,kg/imagezoom/2.0.0/index', function (S, DOM, Event, ImageZoom) {
+        var a = new ImageZoom({
+            imageNode: "#inner",
+            // type inner, 不要设置 width，height
+            type: 'inner',
+            align: {
+                node: "#inner",
+                points: ["tr", "tl"],
+                offset: [0, 0]
+            },
+            bigImageSrc: "http://img03.taobaocdn.com/bao/uploaded/i3/T1fftwXf8jXXX7ps79_073021.jpg",
+            bigImageWidth: 900,
+            bigImageHeight: 900
+        });
+
+
+        new ImageZoom({
+            imageNode: "#multi2",
+            bigImageWidth: 900,
+            bigImageHeight: 900,
+            // 不设置默认为小图的高宽
+            width: 600,
+            height: 200,
+            align: {
+                points: ["tr", "tl"],
+                offset: [0, 0]
+            }
+        });
+
+
+        var m = new ImageZoom({
+            imageNode: "#multi",
+            bigImageWidth: 900,
+            bigImageHeight: 900,
+            // 不设置默认为小图的高宽
+            //width:600,
+            //height:200,
+            align: {
+                points: ["tr", "tl"],
+                offset: [0, 0]
+            }
+        });
+
+        Event.on("#imgList img", 'click', function () {
+            var data = DOM.attr(this, 'data-ks-imagezoom');
+            m.set('hasZoom', DOM.attr(this, 'data-has-zoom'));
+            m.set('imageSrc', data + '_310x310.jpg');
+            if (data && m.get('hasZoom')) {
+                m.set('bigImageSrc', data);
+                m.set("bigImageWidth",
+                        parseInt(DOM.attr(this, 'data-bigImageWidth')));
+                m.set("bigImageHeight",
+                        parseInt(DOM.attr(this, 'data-bigImageHeight')))
+            }
+        });
+    })
+</script>
+</body>
+</html>
